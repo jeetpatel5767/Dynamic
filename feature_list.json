@@ -16,7 +16,7 @@
         "Add androidx.datastore:datastore-preferences",
         "Run ./gradlew assembleDebug; verify APK builds without errors"
       ],
-      "passes": false
+      "passes": true
     },
     {
       "id": "0.1-2",

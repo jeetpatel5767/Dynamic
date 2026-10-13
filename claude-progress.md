@@ -200,3 +200,11 @@ Idempotency check: perform the trigger twice in a row (e.g., two notifications b
 - Created `claude-progress.md` (this file) and `feature_list.json`.
 - No code yet. All features start with `passes: false`.
 - Next agent: begin M0 feature `0.1-1` (create Android project with Compose BOM, min SDK 31, target SDK 35).
+
+### 2026-10-13 — M0 0.1-1 scaffold + CI
+- Scaffolded Gradle project (AGP 8.6.1, Kotlin 2.0.20, Compose BOM 2024.09.03, Gradle 8.9, JDK 17).
+- Package `com.jeet.island`, compileSdk/targetSdk=35, minSdk=31; DataStore pulled in.
+- Added `.github/workflows/build.yml`: builds debug APK on every push, uploads as `app-debug` artifact.
+- CI run #38388289041 green — `./gradlew :app:assembleDebug` succeeds. Feature `0.1-1` flipped to `passes: true`.
+- No physical-device test required for this feature (steps are "APK builds without errors"); M1+ features will.
+- Next agent: `0.1-2` (declare all 6 permissions in AndroidManifest).
