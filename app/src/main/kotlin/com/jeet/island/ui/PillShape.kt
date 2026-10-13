@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.hsv
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.Dp
@@ -38,8 +37,10 @@ fun PillShape(
 
     val bgColor =
         if (!settings.glassEnabled) Color.Black
-        else if (settings.tintHue > 0f) Color.hsv(settings.tintHue, 0.3f, 0.1f, settings.glassOpacity)
-        else Color.Black.copy(alpha = settings.glassOpacity)
+        else if (settings.tintHue > 0f) {
+            val argb = android.graphics.Color.HSVToColor(floatArrayOf(settings.tintHue, 0.3f, 0.1f))
+            Color(argb).copy(alpha = settings.glassOpacity)
+        } else Color.Black.copy(alpha = settings.glassOpacity)
 
     val borderColor = if (settings.glassEnabled) Color.White.copy(alpha = settings.borderAlpha) else Color.Transparent
 
