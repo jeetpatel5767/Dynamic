@@ -1,0 +1,613 @@
+{
+  "project": "Pixel 9 Dynamic Island",
+  "version": "1.0.0",
+  "generated": "2026-10-13",
+  "notes": "Single source of truth for feature completion. Coding agents may ONLY edit the 'passes' field. Never remove, rename, or edit a feature's description, category, or steps. Features are grouped by milestone (M0-M8). Work the lowest-numbered feature with passes:false in the current milestone, one at a time. Every pass requires end-to-end verification on a physical Pixel 9.",
+  "features": [
+    {
+      "id": "0.1-1",
+      "milestone": "M0",
+      "category": "scaffold",
+      "description": "Android project created with Kotlin + Compose BOM, min SDK 31, target SDK 35",
+      "steps": [
+        "Create Android Studio project 'DynamicIsland' with package com.jeet.island",
+        "Set compileSdk=35, minSdk=31, targetSdk=35 in app/build.gradle.kts",
+        "Add androidx.compose BOM 2024.09.00+ with ui, material3, foundation, animation",
+        "Add androidx.datastore:datastore-preferences",
+        "Run ./gradlew assembleDebug; verify APK builds without errors"
+      ],
+      "passes": false
+    },
+    {
+      "id": "0.1-2",
+      "milestone": "M0",
+      "category": "scaffold",
+      "description": "AndroidManifest declares all 6 required permissions",
+      "steps": [
+        "Add SYSTEM_ALERT_WINDOW permission",
+        "Add BIND_NOTIFICATION_LISTENER_SERVICE permission",
+        "Add FOREGROUND_SERVICE and FOREGROUND_SERVICE_SPECIAL_USE permissions",
+        "Add POST_NOTIFICATIONS permission",
+        "Add READ_PHONE_STATE and SCHEDULE_EXACT_ALARM permissions",
+        "Rebuild; verify permissions appear in the APK's AndroidManifest via aapt dump permissions"
+      ],
+      "passes": false
+    },
+    {
+      "id": "0.1-3",
+      "milestone": "M0",
+      "category": "scaffold",
+      "description": "Theme sets windowLayoutInDisplayCutoutMode to shortEdges",
+      "steps": [
+        "In res/values/themes.xml add <item name=\"android:windowLayoutInDisplayCutoutMode\">shortEdges</item>",
+        "Apply theme to the application tag",
+        "Install APK on Pixel 9, open MainActivity, verify status bar extends into cutout area"
+      ],
+      "passes": false
+    },
+    {
+      "id": "0.2-1",
+      "milestone": "M0",
+      "category": "permissions",
+      "description": "MainActivity shows a Compose permission flow for all 6 permissions",
+      "steps": [
+        "Build Compose UI listing each permission with current grant status",
+        "Each row has a 'Grant' button that opens the correct system settings page",
+        "SYSTEM_ALERT_WINDOW uses Settings.ACTION_MANAGE_OVERLAY_PERMISSION",
+        "Notification Listener uses Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS",
+        "Install on Pixel 9, verify tapping each row opens the correct system screen"
+      ],
+      "passes": false
+    },
+    {
+      "id": "0.2-2",
+      "milestone": "M0",
+      "category": "permissions",
+      "description": "Permission state refreshes on activity resume",
+      "steps": [
+        "Hook ON_RESUME lifecycle event to re-check all permission grants",
+        "Grant SYSTEM_ALERT_WINDOW in settings, return to app",
+        "Verify the row updates to 'Granted' without needing a restart"
+      ],
+      "passes": false
+    },
+    {
+      "id": "0.3-1",
+      "milestone": "M0",
+      "category": "service",
+      "description": "IslandService skeleton starts as foreground service of type specialUse",
+      "steps": [
+        "Create IslandService : Service with onStartCommand returning START_STICKY",
+        "Call startForeground with a silent persistent notification (channel 'island_service')",
+        "In manifest, declare android:foregroundServiceType=\"specialUse\" and android:name attribute",
+        "Add property <property android:name=\"android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE\" android:value=\"camera cutout overlay\" />",
+        "Start service from MainActivity after all permissions granted; verify service appears in Developer Options > Running services"
+      ],
+      "passes": false
+    },
+    {
+      "id": "1.1-1",
+      "milestone": "M1",
+      "category": "cutout",
+      "description": "CutoutResolver reads DisplayCutout from current window metrics",
+      "steps": [
+        "Create src/main/java/com/jeet/island/cutout/CutoutResolver.kt",
+        "Implement fun resolve(context: Context): CutoutGeometry? reading windowManager.currentWindowMetrics.windowInsets.displayCutout",
+        "Return CutoutGeometry(centerX, topY, width, height, path) with path from cutoutPath on API 31+",
+        "Log the geometry to logcat on service start",
+        "Install on Pixel 9, verify logcat shows a non-null geometry with centerX near screen midpoint"
+      ],
+      "passes": false
+    },
+    {
+      "id": "1.1-2",
+      "milestone": "M1",
+      "category": "cutout",
+      "description": "Fallback to boundingRects when cutoutPath is null (API 28-30 safety)",
+      "steps": [
+        "In CutoutResolver, if displayCutout.cutoutPath == null use boundingRects[0]",
+        "Derive geometry from the rect's centroid and dimensions",
+        "Simulate the fallback by null-coalescing path in a debug flag; verify geometry still computes correctly"
+      ],
+      "passes": false
+    },
+    {
+      "id": "1.2-1",
+      "milestone": "M1",
+      "category": "overlay",
+      "description": "Overlay window attached via WindowManager with TYPE_APPLICATION_OVERLAY",
+      "steps": [
+        "In IslandService.onCreate, create WindowManager.LayoutParams with type=TYPE_APPLICATION_OVERLAY, flags=FLAG_NOT_FOCUSABLE|FLAG_LAYOUT_IN_SCREEN|FLAG_LAYOUT_NO_LIMITS, format=TRANSLUCENT",
+        "Set gravity=TOP|CENTER_HORIZONTAL",
+        "Compute y = cutoutGeometry.topY - padding",
+        "Attach a ComposeView as the overlay root",
+        "Install, grant SYSTEM_ALERT_WINDOW, start service; verify no crash and window appears in dumpsys window"
+      ],
+      "passes": false
+    },
+    {
+      "id": "1.2-2",
+      "milestone": "M1",
+      "category": "overlay",
+      "description": "Android 15 overlay order enforced: overlay shown before startForegroundService",
+      "steps": [
+        "In MainActivity, order calls: addView(overlayView, params) FIRST, then startForegroundService(serviceIntent)",
+        "Verify ForegroundServiceStartNotAllowedException does NOT occur on Pixel 9 running Android 15",
+        "Reversed order should throw; confirm by temporary debug swap"
+      ],
+      "passes": false
+    },
+    {
+      "id": "1.3-1",
+      "milestone": "M1",
+      "category": "ui",
+      "description": "PillShape composable renders a black capsule at resting size (126dp x 37dp)",
+      "steps": [
+        "Create PillShape composable using Box with RoundedCornerShape(50%)",
+        "Fill with Color.Black (opaque for first draft)",
+        "Default size: 126.dp wide, 37.dp tall",
+        "Attach to overlay; install and view on Pixel 9",
+        "Screenshot the device, verify pill is centered horizontally and hugs the camera hole with no visible gap"
+      ],
+      "passes": false
+    },
+    {
+      "id": "1.3-2",
+      "milestone": "M1",
+      "category": "ui",
+      "description": "Pill repositions on configuration change (rotation)",
+      "steps": [
+        "Listen for ComponentCallbacks2.onConfigurationChanged in the service",
+        "Re-run CutoutResolver.resolve and update WindowManager layout params",
+        "Rotate phone to landscape and back",
+        "Confirm pill either repositions correctly to new cutout location or hides cleanly (acceptable either way); no half-off-screen states"
+      ],
+      "passes": false
+    },
+    {
+      "id": "2.1-1",
+      "milestone": "M2",
+      "category": "animation",
+      "description": "Pill expands to a target size on tap with spring animation",
+      "steps": [
+        "Add clickable modifier to the pill",
+        "Toggle a state: PillSize.Resting (126x37) <-> PillSize.Expanded (280x80)",
+        "Use animateDpAsState with spring(dampingRatio=0.75f, stiffness=400f) for both width and height",
+        "Install on Pixel 9, tap the pill 10 times, verify spring feels snappy with slight overshoot each time"
+      ],
+      "passes": false
+    },
+    {
+      "id": "2.1-2",
+      "milestone": "M2",
+      "category": "animation",
+      "description": "Corner radius stays at height/2 throughout the morph for perfect capsule",
+      "steps": [
+        "Derive corner radius dynamically from the animated height value",
+        "RoundedCornerShape((animatedHeight.value / 2f).dp)",
+        "Visually verify during a 10-tap sequence that no frame shows a square-cornered pill"
+      ],
+      "passes": false
+    },
+    {
+      "id": "2.2-1",
+      "milestone": "M2",
+      "category": "animation",
+      "description": "Content fades + scales with AnimatedContent during state change",
+      "steps": [
+        "Wrap the pill's inner slot in AnimatedContent",
+        "Transition spec: fadeIn + scaleIn(initialScale=0.95f) togetherWith fadeOut + scaleOut(targetScale=0.95f)",
+        "Toggle between an empty inner (resting) and a sample Text 'Hello Island' (expanded)",
+        "Verify text pops in with the squeeze pulse described in spec Section 4"
+      ],
+      "passes": false
+    },
+    {
+      "id": "3.1-1",
+      "milestone": "M3",
+      "category": "notifications",
+      "description": "NotifListener service receives StatusBarNotifications",
+      "steps": [
+        "Create NotifListener : NotificationListenerService",
+        "Register in manifest with BIND_NOTIFICATION_LISTENER_SERVICE permission and the notification listener intent filter",
+        "Override onNotificationPosted; log package, title, text to logcat",
+        "Grant Notification Access, send yourself a WhatsApp message",
+        "Verify logcat shows the notification details"
+      ],
+      "passes": false
+    },
+    {
+      "id": "3.2-1",
+      "milestone": "M3",
+      "category": "state-machine",
+      "description": "IslandStateMachine transitions IDLE -> EXPANDED_NOTIF on notification",
+      "steps": [
+        "Create IslandStateMachine with StateFlow<IslandState>",
+        "States: Idle, ExpandedNotif(packageName, title, text, icon)",
+        "NotifListener posts to a shared Flow; state machine collects and transitions",
+        "Verify by observing state in a logcat tap: new notification -> state flips to ExpandedNotif"
+      ],
+      "passes": false
+    },
+    {
+      "id": "3.2-2",
+      "milestone": "M3",
+      "category": "state-machine",
+      "description": "ExpandedNotif auto-collapses to Idle after 3 seconds",
+      "steps": [
+        "On entering ExpandedNotif, launch a coroutine that delays 3000ms then transitions to Idle",
+        "If a new notification arrives mid-timeout, reset the timer",
+        "Install, send 3 notifications spaced 1 second apart; verify pill stays expanded through all three, collapses 3s after the last"
+      ],
+      "passes": false
+    },
+    {
+      "id": "3.3-1",
+      "milestone": "M3",
+      "category": "ui",
+      "description": "NotifContent composable renders app icon + title + one-line text",
+      "steps": [
+        "Create ui/states/NotifContent.kt",
+        "Horizontal row: app icon (24dp), title (truncate to 1 line, bold), text (truncate to 1 line, regular)",
+        "Load app icon via PackageManager.getApplicationIcon",
+        "Send a WhatsApp notification; verify icon loads, sender shows as title, preview as text, all on one line"
+      ],
+      "passes": false
+    },
+    {
+      "id": "4.1-1",
+      "milestone": "M4",
+      "category": "media",
+      "description": "MediaSessionWatcher reads active sessions via MediaSessionManager",
+      "steps": [
+        "Create MediaSessionWatcher using MediaSessionManager.getActiveSessions (requires notification listener permission)",
+        "Register OnActiveSessionsChangedListener",
+        "For each active controller, read metadata (title, artist, album art) and playback state",
+        "Expose a StateFlow<MediaState?>",
+        "Start Spotify playing a song; verify StateFlow emits the correct title + artist"
+      ],
+      "passes": false
+    },
+    {
+      "id": "4.1-2",
+      "milestone": "M4",
+      "category": "media",
+      "description": "Media state transitions to EXPANDED_MEDIA and persists while playing",
+      "steps": [
+        "Extend state machine: IslandState.ExpandedMedia(title, artist, albumArt, isPlaying, position, duration)",
+        "Transition from Idle on first non-null MediaState",
+        "Do NOT auto-collapse while playback state is PLAYING or PAUSED",
+        "Return to Idle only when the session stops / is released"
+      ],
+      "passes": false
+    },
+    {
+      "id": "4.2-1",
+      "milestone": "M4",
+      "category": "ui",
+      "description": "MediaContent composable shows album art, title, artist, play/pause button",
+      "steps": [
+        "Create ui/states/MediaContent.kt",
+        "Add Coil image loader dependency",
+        "Layout: album art (40dp rounded corners) on left, title+artist stacked center, play/pause icon button on right",
+        "Tap play/pause invokes controller.transportControls.play() / .pause()",
+        "Verify on Pixel 9 with Spotify: pill shows art + metadata, tapping pause stops Spotify, tapping again resumes"
+      ],
+      "passes": false
+    },
+    {
+      "id": "4.2-2",
+      "milestone": "M4",
+      "category": "ui",
+      "description": "Waveform scrubber animates with playback position",
+      "steps": [
+        "Draw a thin progress bar below the title/artist row",
+        "Width proportional to position / duration",
+        "Update at 500ms intervals via a ticker Flow while playing",
+        "Verify bar advances smoothly during a song and matches Spotify's position"
+      ],
+      "passes": false
+    },
+    {
+      "id": "5.1-1",
+      "milestone": "M5",
+      "category": "timer",
+      "description": "TimerService holds TimerState in StateFlow",
+      "steps": [
+        "Create TimerService with StateFlow<TimerState>",
+        "TimerState: Idle | Running(endTimeMillis) | Finished",
+        "Expose startTimer(durationMillis) and cancelTimer()",
+        "Smoke test from an in-app button: start 10s timer, verify StateFlow emits Running, then Finished at ~10s"
+      ],
+      "passes": false
+    },
+    {
+      "id": "5.1-2",
+      "milestone": "M5",
+      "category": "timer",
+      "description": "AlarmManager setExactAndAllowWhileIdle fires the terminal event",
+      "steps": [
+        "On startTimer, call AlarmManager.setExactAndAllowWhileIdle for the end time",
+        "Broadcast receiver on fire transitions state to Finished and vibrates/plays sound",
+        "Start a 60s timer, lock the phone, wait; verify fire happens on time even with Doze"
+      ],
+      "passes": false
+    },
+    {
+      "id": "5.2-1",
+      "milestone": "M5",
+      "category": "ui",
+      "description": "TimerContent composable draws a depleting countdown arc",
+      "steps": [
+        "Create ui/states/TimerContent.kt",
+        "Draw a Canvas arc that depletes from 360 to 0 degrees as time progresses",
+        "Center shows mm:ss remaining",
+        "Verify on Pixel 9: start 2-minute timer, watch arc deplete and digits countdown in real time"
+      ],
+      "passes": false
+    },
+    {
+      "id": "5.2-2",
+      "milestone": "M5",
+      "category": "ui",
+      "description": "Timer finish triggers a scale-pulse animation + sound",
+      "steps": [
+        "On transition to Finished, run a scale animation (1.0 -> 1.08 -> 1.0) with spring, repeated 3 times",
+        "Play a short bell sound via SoundPool",
+        "Start a 5s timer; verify pulse + sound at zero"
+      ],
+      "passes": false
+    },
+    {
+      "id": "6.1-1",
+      "milestone": "M6",
+      "category": "call",
+      "description": "TelephonyCallback registers for CALL_STATE on API 31+",
+      "steps": [
+        "Register TelephonyCallback via TelephonyManager.registerTelephonyCallback",
+        "Implement CallStateListener.onCallStateChanged",
+        "Transition state machine to ExpandedCall(number) on RINGING",
+        "Transition back to Idle on IDLE",
+        "Call the phone from another device; verify state transitions logged in logcat"
+      ],
+      "passes": false
+    },
+    {
+      "id": "6.1-2",
+      "milestone": "M6",
+      "category": "ui",
+      "description": "CallContent shows caller + Answer/Decline buttons",
+      "steps": [
+        "Create ui/states/CallContent.kt",
+        "Resolve caller name via ContactsContract (fallback to phone number)",
+        "Answer and Decline buttons invoke TelecomManager.acceptRingingCall and endCall",
+        "Verify on Pixel 9: incoming call expands pill, tap Decline hangs up"
+      ],
+      "passes": false
+    },
+    {
+      "id": "6.2-1",
+      "milestone": "M6",
+      "category": "charging",
+      "description": "ACTION_POWER_CONNECTED broadcast triggers a one-shot pulse",
+      "steps": [
+        "Register BroadcastReceiver for Intent.ACTION_POWER_CONNECTED and ACTION_POWER_DISCONNECTED",
+        "On connected: read BatteryManager level, transition state to ChargingPulse(level) for 2 seconds",
+        "Show '% charged' briefly inside the pill",
+        "Plug and unplug charger on Pixel 9; verify pill pulses and shows battery percent"
+      ],
+      "passes": false
+    },
+    {
+      "id": "7.1-1",
+      "milestone": "M7",
+      "category": "glass",
+      "description": "GlassSettings data class and DataStore wiring",
+      "steps": [
+        "Create GlassSettings(glassOpacity, borderAlpha, highlightStrength, noiseAmount, tintHue, cornerSmoothing, glassEnabled)",
+        "Define Preferences keys and read/write functions in a GlassSettingsStore object",
+        "Expose a StateFlow<GlassSettings> that the overlay observes",
+        "Write defaults from spec Section 12 on first launch; verify Preferences file created at app's datastore dir"
+      ],
+      "passes": false
+    },
+    {
+      "id": "7.1-2",
+      "milestone": "M7",
+      "category": "glass",
+      "description": "PillShape renders with semi-transparent black + border + top highlight",
+      "steps": [
+        "In PillShape, apply background = Color.Black.copy(alpha = settings.glassOpacity)",
+        "Add border of Color.White.copy(alpha = settings.borderAlpha), 1.dp",
+        "Overlay a top-edge Brush.verticalGradient (Color.White at settings.highlightStrength * 0.3f -> transparent)",
+        "Verify at defaults (opacity 0.55, border 0.10, highlight 0.60): pill reads as glassy, not pure black"
+      ],
+      "passes": false
+    },
+    {
+      "id": "7.1-3",
+      "milestone": "M7",
+      "category": "glass",
+      "description": "Noise texture overlay driven by noiseAmount",
+      "steps": [
+        "Generate a 32x32 noise bitmap once at startup",
+        "Overlay via drawBehind with alpha = settings.noiseAmount",
+        "Verify at noiseAmount=0.03: faint grain visible on close inspection",
+        "Verify at noiseAmount=0.0: no grain"
+      ],
+      "passes": false
+    },
+    {
+      "id": "7.2-1",
+      "milestone": "M7",
+      "category": "settings-ui",
+      "description": "Settings Compose screen with 6 live sliders",
+      "steps": [
+        "Create ui/settings/SettingsScreen.kt",
+        "Sliders for: glassOpacity (0.30-0.85), borderAlpha (0-0.20), highlightStrength (0-1.0), noiseAmount (0-0.10), tintHue (0-360), cornerSmoothing (0-1)",
+        "Each slider writes to DataStore on change",
+        "A mini preview pill at the top of the screen reskins live",
+        "Verify on Pixel 9: dragging opacity reskins both preview AND the actual overlay in real time"
+      ],
+      "passes": false
+    },
+    {
+      "id": "7.2-2",
+      "milestone": "M7",
+      "category": "settings-ui",
+      "description": "Four preset chips (Classic Black / Frosted / Crystal / Smoke)",
+      "steps": [
+        "Row of chips above the sliders",
+        "Classic Black: opacity 1.0, border 0, highlight 0, noise 0, tintHue 0",
+        "Frosted: defaults from spec Section 12",
+        "Crystal: opacity 0.35, border 0.18, highlight 0.9, noise 0.02",
+        "Smoke: opacity 0.75, border 0.05, highlight 0.3, noise 0, tintHue 30",
+        "Tap a chip; verify all sliders snap to preset values AND overlay reskins"
+      ],
+      "passes": false
+    },
+    {
+      "id": "7.2-3",
+      "milestone": "M7",
+      "category": "settings-ui",
+      "description": "Glass toggle at top disables all glass effects (reverts to Classic Black)",
+      "steps": [
+        "Add Switch at top of SettingsScreen bound to settings.glassEnabled",
+        "When off, PillShape ignores all other glass settings and uses opaque black",
+        "Toggle off; verify pill becomes pure black regardless of slider positions",
+        "Toggle on; verify current slider values re-apply"
+      ],
+      "passes": false
+    },
+    {
+      "id": "7.3-1",
+      "milestone": "M7",
+      "category": "glass",
+      "description": "Settings persist across app restart and device reboot",
+      "steps": [
+        "Change opacity to 0.75",
+        "Force-stop the app, relaunch",
+        "Verify opacity is still 0.75",
+        "Reboot the Pixel 9, re-grant overlay permission if needed",
+        "Verify opacity still 0.75"
+      ],
+      "passes": false
+    },
+    {
+      "id": "8.1-1",
+      "milestone": "M8",
+      "category": "state-machine",
+      "description": "Split state resolves concurrent Timer + Media into two capsules",
+      "steps": [
+        "Add IslandState.Split(leading: InnerState, trailing: InnerState)",
+        "State machine detects when both TimerService (Running) and MediaSessionWatcher (ExpandedMedia) are active",
+        "Transition to Split with timer on leading, media on trailing",
+        "Verify: start Spotify, start 2-minute timer; pill splits into two capsules"
+      ],
+      "passes": false
+    },
+    {
+      "id": "8.1-2",
+      "milestone": "M8",
+      "category": "ui",
+      "description": "Split layout renders two capsules with a visible gap",
+      "steps": [
+        "Create ui/SplitLayout.kt",
+        "Row of two capsules centered on the cutout, with 8dp gap",
+        "Leading capsule is wider (shows media), trailing is narrower (timer digits)",
+        "Verify visually on Pixel 9: no overlap, gap aligned, both capsules hug the cutout line"
+      ],
+      "passes": false
+    },
+    {
+      "id": "8.1-3",
+      "milestone": "M8",
+      "category": "state-machine",
+      "description": "Priority override: incoming call collapses Split, call UI takes over",
+      "steps": [
+        "In state machine, Call state has highest priority",
+        "When Call RINGING arrives during Split, transition to ExpandedCall",
+        "On call end, restore Split (or whichever states are still active)",
+        "Verify by starting timer + media, then calling the phone; call UI shows, hangs up, split restores"
+      ],
+      "passes": false
+    },
+    {
+      "id": "8.2-1",
+      "milestone": "M8",
+      "category": "polish",
+      "description": "Haptic feedback on tap-to-expand",
+      "steps": [
+        "Call view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK) on pill tap",
+        "Verify a short tick is felt on Pixel 9 taps"
+      ],
+      "passes": false
+    },
+    {
+      "id": "8.2-2",
+      "milestone": "M8",
+      "category": "polish",
+      "description": "Overlay hides automatically on secure screens (lockscreen, bank apps)",
+      "steps": [
+        "TYPE_APPLICATION_OVERLAY already does this via SurfaceFlinger; verify behavior",
+        "Open a banking app that marks its window FLAG_SECURE; confirm pill is hidden",
+        "Lock the phone; confirm pill is hidden on lockscreen",
+        "Unlock; pill returns"
+      ],
+      "passes": false
+    },
+    {
+      "id": "8.2-3",
+      "milestone": "M8",
+      "category": "polish",
+      "description": "Battery optimization exemption prompt on first launch",
+      "steps": [
+        "If PowerManager.isIgnoringBatteryOptimizations == false, show a one-time Compose dialog",
+        "Dialog explains why and has a button that opens Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+        "Dismiss once stored in DataStore so it never shows again",
+        "Verify flow on fresh install"
+      ],
+      "passes": false
+    },
+    {
+      "id": "verify-1",
+      "milestone": "verify",
+      "category": "verification",
+      "description": "End-to-end: fresh install -> grants -> all 5 states exercised on Pixel 9",
+      "steps": [
+        "Factory-reset-level clean install",
+        "Walk the permission flow granting all required permissions",
+        "Trigger each state in order: send a notification, play Spotify, start a timer, receive a call, plug charger",
+        "Record a screen video showing all 5 state transitions",
+        "Verify no crashes, no stuck states, no mis-positioned pills"
+      ],
+      "passes": false
+    },
+    {
+      "id": "verify-2",
+      "milestone": "verify",
+      "category": "verification",
+      "description": "Overnight soak test: service survives 8 hours idle",
+      "steps": [
+        "Install, grant permissions, start service",
+        "Lock phone and leave for 8+ hours (overnight)",
+        "In the morning, send a notification; verify pill still responds",
+        "Check Developer Options > Running services: IslandService still listed",
+        "Review logcat for any FATAL exceptions during the idle window"
+      ],
+      "passes": false
+    },
+    {
+      "id": "verify-3",
+      "milestone": "verify",
+      "category": "verification",
+      "description": "Settings round-trip: all 4 presets apply correctly and persist",
+      "steps": [
+        "For each preset (Classic Black, Frosted, Crystal, Smoke): tap chip, screenshot pill, force-stop app, relaunch, screenshot pill again",
+        "Verify both screenshots match for each preset",
+        "Verify the 4 presets look visually distinct from each other"
+      ],
+      "passes": false
+    }
+  ]
+}
