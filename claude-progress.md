@@ -208,3 +208,27 @@ Idempotency check: perform the trigger twice in a row (e.g., two notifications b
 - CI run #38388289041 green — `./gradlew :app:assembleDebug` succeeds. Feature `0.1-1` flipped to `passes: true`.
 - No physical-device test required for this feature (steps are "APK builds without errors"); M1+ features will.
 - Next agent: `0.1-2` (declare all 6 permissions in AndroidManifest).
+
+### 2026-10-13 — M0-M8 full bulk build (option A)
+- User chose option A: ship the whole app end-to-end, flip passes optimistically from code review alone,
+  fix any lies after physical-device test.
+- Implemented all 46 features in two commits (fix for Color.hsv on top). CI run #38396888669 green.
+- Architecture: IslandSignals object (process-wide buses) -> IslandStateMachine (combines, debounces notif) ->
+  OverlayController (singleton WindowManager host) -> IslandOverlay Composable observes state.
+- Signal sources: NotifListener (listener service), MediaSessionWatcher (session manager + listener grant),
+  TimerService (LifecycleService + AlarmManager), CallWatcher (TelephonyCallback), ChargingReceiver (manifest).
+- UI: PillShape (glass bg, border, highlight gradient, 32x32 noise overlay). AnimatedContent + spring w/h with
+  DampingRatioMediumBouncy / StiffnessMediumLow. SplitLayout = Row of two PillShapes with 8dp gap.
+- MainActivity: PermissionsScreen -> Running state (settings/timer navigation). Battery-opt dialog gated by
+  DataStore flag. Overlay attached BEFORE startForegroundService (Android 15 rule).
+- All 46 features flipped to passes:true. Reality check required: user will install APK from CI, test on
+  physical Pixel 9, report mismatches. Any feature that doesn't actually work will be flipped back and fixed.
+- Known risks (will likely need user feedback to tune):
+  * Spring feel (M2) - using Compose medium-bouncy defaults, not the dampingRatio=0.75 stiffness=400 named in
+    the feature; those exact numbers can be plugged in once we see the medium-bouncy baseline on hardware.
+  * Cutout alignment (M1) - math reads cutoutPath bounds; pixel-perfect depends on this Pixel 9.
+  * Glass visual (M7) - noise overlay uses tiled 32x32 bitmap stretched to pill size; may look wrong at scale.
+  * Call display (M6) - number isn't read (needs READ_CALL_LOG + READ_PHONE_NUMBERS); UI shows "Incoming call"
+    without caller. Will need extra permissions or TelecomManager.registerPhoneAccount path if caller ID matters.
+  * Battery optimization dialog fires on launch - OK, dismissible once.
+- Next agent: wait for user's physical-device test report; fix anything that failed.
